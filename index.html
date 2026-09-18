@@ -7,7 +7,7 @@
 <style>
 body{margin:0;background:#111;color:#fff;font-family:Arial}
 header{padding:18px;text-align:center;background:#181818;font-size:22px;font-weight:bold}
-#messages{height:calc(100vh - 140px);overflow:auto;padding:15px}
+#chat messages{height:calc(100vh - 140px);overflow:auto;padding:15px}
 .msg{background:#252525;padding:12px;margin:8px 0;border-radius:12px}
 form{position:fixed;bottom:0;left:0;right:0;background:#181818;padding:10px;display:flex;gap:8px}
 input{flex:1;padding:13px;border:0;border-radius:10px;font-size:16px}
@@ -18,7 +18,7 @@ button{padding:0 20px;border:0;border-radius:10px;background:#00a884;color:#fff;
 
 <header>STON Messenger</header>
 
-<div id="messages"></div>
+<div id="chat messages"></div>
 
 <form id="form">
 <input id="input" placeholder="اكتب رسالة..." autocomplete="off">
@@ -30,7 +30,7 @@ button{padding:0 20px;border:0;border-radius:10px;background:#00a884;color:#fff;
 const socket = io();
 const form = document.getElementById("form");
 const input = document.getElementById("input");
-const messages = document.getElementById("messages");
+const chat messages = document.getElementById("chat messages");
 
 form.addEventListener("submit", function(e){
   e.preventDefault();
@@ -38,16 +38,16 @@ form.addEventListener("submit", function(e){
   const msg = input.value.trim();
   if(!msg) return;
 
-  socket.emit("message", msg);
+  socket.emit("chat message", msg);
   input.value = "";
 });
 
-socket.on("message", function(msg){
+socket.on("chat message", function(msg){
   const div = document.createElement("div");
   div.className = "msg";
   div.textContent = msg;
-  messages.appendChild(div);
-  messages.scrollTop = messages.scrollHeight;
+  chat messages.appendChild(div);
+  chat messages.scrollTop = chat messages.scrollHeight;
 });
 </script>
 
@@ -59,7 +59,7 @@ document.getElementById("form").onsubmit = function(e) {
   e.preventDefault();
   const msg = document.getElementById("input").value.trim();
   if (msg) {
-    socket.emit("message", msg);
+    socket.emit("chat message", msg);
     document.getElementById("input").value = "";
   }
 };
