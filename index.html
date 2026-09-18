@@ -7,13 +7,16 @@
 <style>
 body{margin:0;background:#111;color:#fff;font-family:Arial}
 header{padding:18px;text-align:center;background:#181818;font-size:22px;font-weight:bold}
-#messages{height:calc(100vh - 190px);overflow:auto;padding:15px}
+#nameBox,#usersBox,#selected{padding:10px;background:#181818}
+#name{width:100%;box-sizing:border-box;padding:12px;border:0;border-radius:10px}
+#users{display:flex;gap:8px;overflow:auto;margin-top:8px}
+.user{padding:10px 15px;border:0;border-radius:10px;background:#333;color:#fff;white-space:nowrap}
+#selected{text-align:center;background:#202020}
+#messages{height:calc(100vh - 285px);overflow:auto;padding:15px}
 .msg{background:#252525;padding:12px;margin:8px 0;border-radius:12px}
-#nameBox{display:flex;padding:10px;background:#181818;gap:8px}
-#name{flex:1;padding:12px;border:0;border-radius:10px}
 form{position:fixed;bottom:0;left:0;right:0;background:#181818;padding:10px;display:flex;gap:8px}
-input{flex:1;padding:13px;border:0;border-radius:10px;font-size:16px}
-button{padding:0 20px;border:0;border-radius:10px;background:#00a884;color:#fff;font-weight:bold}
+#input{flex:1;padding:13px;border:0;border-radius:10px;font-size:16px}
+button{padding:10px 18px;border:0;border-radius:10px;background:#00a884;color:#fff;font-weight:bold}
 </style>
 </head>
 <body>
@@ -24,6 +27,13 @@ button{padding:0 20px;border:0;border-radius:10px;background:#00a884;color:#fff;
 <input id="name" placeholder="اكتب اسمك..." autocomplete="off">
 </div>
 
+<div id="usersBox">
+<b>المستخدمون المتصلون:</b>
+<div id="users"></div>
+</div>
+
+<div id="selected">اختر مستخدمًا</div>
+
 <div id="messages"></div>
 
 <form id="form">
@@ -33,39 +43,59 @@ button{padding:0 20px;border:0;border-radius:10px;background:#00a884;color:#fff;
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const socket = io();
-const form = document.getElementById("form");
-const input = document.getElementById("input");
-const name = document.getElementById("name");
-const messages = document.getElementById("messages");
+const socket=io();
+const form=document.getElementById("form");
+const input=document.getElementById("input");
+const name=document.getElementById("name");
+const users=document.getElementById("users");
+const messages=document.getElementById("messages");
+const selected=document.getElementById("selected");
 
-const savedName = localStorage.getItem("ston_name");
-if (savedName) name.value = savedName;
+let selectedUser=null;
 
-form.addEventListener("submit", function(e) {
-  e.preventDefault();
+const saved=localStorage.getItem("ston_name");
+if(saved) name.value=saved;
 
-  const msg = input.value.trim();
-  const username = name.value.trim() || "مستخدم";
-
-  if (!msg) return;
-
-  localStorage.setItem("ston_name", username);
-
-  socket.emit("chat message", {
-    name: username,
-    text: msg
-  });
-
-  input.value = "";
+socket.on("connect",()=>{
+  socket.emit("join",name.value.trim()||"مستخدم");
 });
 
-socket.on("chat message", function(data) {
-  const div = document.createElement("div");
-  div.className = "msg";
-  div.textContent = data.name + ": " + data.text;
+socket.on("users",list=>{
+  users.innerHTML="";
+  list.forEach(user=>{
+    if(user.id===socket.id)return;
+    const b=document.createElement("button");
+    b.className="user";
+    b.textContent=user.name;
+    b.onclick=()=>{
+      selectedUser=user.id;
+      selected.textContent="المحادثة مع: "+user.name;
+      messages.innerHTML="";
+    };
+    users.appendChild(b);
+  });
+});
+
+form.addEventListener("submit",e=>{
+  e.preventDefault();
+  const text=input.value.trim();
+  if(!text)return;
+  if(!selectedUser){
+    alert("اختر مستخدمًا أولًا");
+    return;
+  }
+  const username=name.value.trim()||"مستخدم";
+  localStorage.setItem("ston_name",username);
+  socket.emit("private message",{to:selectedUser,text:text});
+  input.value="";
+});
+
+socket.on("private message",data=>{
+  const div=document.createElement("div");
+  div.className="msg";
+  div.textContent=data.name+": "+data.text;
   messages.appendChild(div);
-  messages.scrollTop = messages.scrollHeight;
+  messages.scrollTop=messages.scrollHeight;
 });
 </script>
 

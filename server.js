@@ -8,14 +8,44 @@ const io = new Server(server);
 
 app.use(express.static(__dirname));
 
+const users = {};
+
 io.on("connection", (socket) => {
   console.log("جهاز اتصل:", socket.id);
 
-  socket.on("chat message", (data) => {
-    io.emit("chat message", data);
+  socket.on("join", (username) => {
+    users[socket.id] = username || "مستخدم";
+
+    const userList = Object.entries(users).map(([id, name]) => ({
+      id,
+      name
+    }));
+
+    io.emit("users", userList);
+  });
+
+  socket.on("private message", (data) => {
+    const senderName = users[socket.id] || "مستخدم";
+
+    const message = {
+      name: senderName,
+      text: data.text
+    };
+
+    io.to(data.to).emit("private message", message);
+    socket.emit("private message", message);
   });
 
   socket.on("disconnect", () => {
+    delete users[socket.id];
+
+    const userList = Object.entries(users).map(([id, name]) => ({
+      id,
+      name
+    }));
+
+    io.emit("users", userList);
+
     console.log("جهاز خرج:", socket.id);
   });
 });
