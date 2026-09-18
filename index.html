@@ -53,3 +53,14 @@ socket.on("message", function(msg){
 
 </body>
 </html>
+
+<script>
+document.getElementById("form").onsubmit = function(e) {
+  e.preventDefault();
+  const msg = document.getElementById("input").value.trim();
+  if (msg) {
+    socket.emit("message", msg);
+    document.getElementById("input").value = "";
+  }
+};
+</script>
