@@ -1,47 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -69,9 +25,9 @@ header{padding:18px;text-align:center;background:#181818;font-size:22px;font-wei
 .msgimg{max-width:230px;border-radius:12px;display:block;margin-top:5px}
 form{position:fixed;bottom:0;left:0;right:0;background:#181818;padding:10px;display:flex;gap:8px}
 #input{flex:1;padding:13px;border:0;border-radius:10px;font-size:16px}
-button{padding:10px 18px;border:0;border-radius:10px;background:#00a884;color:#fff;font-weight:bold}
+button,.photoBtn{padding:10px 14px;border:0;border-radius:10px;background:#00a884;color:#fff;font-weight:bold}
+.photoBtn{background:#444;cursor:pointer}
 #photo{display:none}
-.photoBtn{padding:10px 14px;background:#444;border-radius:10px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -93,6 +49,7 @@ button{padding:10px 18px;border:0;border-radius:10px;background:#00a884;color:#f
 <form id="form">
 <label for="photo" class="photoBtn">🖼️</label>
 <input id="photo" type="file" accept="image/*">
+<button type="button" id="record">🎤</button>
 <input id="input" placeholder="اكتب رسالة..." autocomplete="off">
 <button type="submit">إرسال</button>
 </form>
@@ -100,7 +57,6 @@ button{padding:10px 18px;border:0;border-radius:10px;background:#00a884;color:#f
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket=io();
-
 const form=document.getElementById("form");
 const input=document.getElementById("input");
 const nameInput=document.getElementById("name");
@@ -108,119 +64,160 @@ const usersBox=document.getElementById("users");
 const messages=document.getElementById("messages");
 const selected=document.getElementById("selected");
 const photo=document.getElementById("photo");
+const record=document.getElementById("record");
 
 let selectedUser=null;
+let recorder=null;
+let chunks=[];
 
 const savedName=localStorage.getItem("ston_name");
 if(savedName) nameInput.value=savedName;
 
 function join(){
-  const username=nameInput.value.trim()||"مستخدم";
-  localStorage.setItem("ston_name",username);
-  socket.emit("join",username);
+ const username=nameInput.value.trim()||"مستخدم";
+ localStorage.setItem("ston_name",username);
+ socket.emit("join",username);
 }
 
 socket.on("connect",join);
-
 nameInput.addEventListener("change",join);
 
 socket.on("users",list=>{
-  usersBox.innerHTML="";
-
-  list.forEach(user=>{
-    if(user.id===socket.id)return;
-
-    const b=document.createElement("button");
-    b.className="user";
-    b.textContent=user.name;
-
-    b.onclick=()=>{
-      selectedUser=user.id;
-      selected.textContent="المحادثة مع: "+user.name;
-      messages.innerHTML="";
-    };
-
-    usersBox.appendChild(b);
-  });
+ usersBox.innerHTML="";
+ list.forEach(user=>{
+  if(user.id===socket.id)return;
+  const b=document.createElement("button");
+  b.className="user";
+  b.textContent=user.name;
+  b.onclick=()=>{
+   selectedUser=user.id;
+   selected.textContent="المحادثة مع: "+user.name;
+   messages.innerHTML="";
+  };
+  usersBox.appendChild(b);
+ });
 });
 
 form.addEventListener("submit",e=>{
-  e.preventDefault();
-
-  const text=input.value.trim();
-  if(!text)return;
-
-  if(!selectedUser){
-    alert("اختر مستخدمًا أولًا");
-    return;
-  }
-
-  socket.emit("private message",{
-    to:selectedUser,
-    text:text
-  });
-
-  input.value="";
+ e.preventDefault();
+ const text=input.value.trim();
+ if(!text)return;
+ if(!selectedUser){
+  alert("اختر مستخدمًا أولًا");
+  return;
+ }
+ socket.emit("private message",{to:selectedUser,text:text});
+ input.value="";
 });
 
 photo.addEventListener("change",()=>{
-  const file=photo.files[0];
-
-  if(!file)return;
-
-  if(!selectedUser){
-    alert("اختر مستخدمًا أولًا");
-    photo.value="";
-    return;
-  }
-
-  const reader=new FileReader();
-
-  reader.onload=()=>{
-    socket.emit("private image",{
-      to:selectedUser,
-      image:reader.result
-    });
-  };
-
-  reader.readAsDataURL(file);
+ const file=photo.files[0];
+ if(!file)return;
+ if(!selectedUser){
+  alert("اختر مستخدمًا أولًا");
   photo.value="";
+  return;
+ }
+ const reader=new FileReader();
+ reader.onload=()=>{
+  socket.emit("private image",{to:selectedUser,image:reader.result});
+ };
+ reader.readAsDataURL(file);
+ photo.value="";
 });
 
-function showMessage(data,isImage=false){
-  const row=document.createElement("div");
-  const bubble=document.createElement("div");
-  const who=document.createElement("div");
+record.addEventListener("click",async()=>{
+ if(!selectedUser){
+  alert("اختر مستخدمًا أولًا");
+  return;
+ }
 
-  row.className="msg "+(data.from===socket.id?"mine":"theirs");
-  bubble.className="bubble";
-  who.className="msgname";
-  who.textContent=data.name;
-
-  bubble.appendChild(who);
-
-  if(isImage){
-    const img=document.createElement("img");
-    img.src=data.image;
-    img.className="msgimg";
-    bubble.appendChild(img);
-  }else{
-    bubble.appendChild(document.createTextNode(data.text));
+ if(!recorder || recorder.state==="inactive"){
+  try{
+   const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+   recorder=new MediaRecorder(stream);
+   chunks=[];
+   recorder.ondataavailable=e=>chunks.push(e.data);
+   recorder.onstop=()=>{
+    const blob=new Blob(chunks,{type:"audio/webm"});
+    const reader=new FileReader();
+    reader.onload=()=>{
+     socket.emit("private audio",{to:selectedUser,audio:reader.result});
+    };
+    reader.readAsDataURL(blob);
+    stream.getTracks().forEach(t=>t.stop());
+   };
+   recorder.start();
+   record.textContent="⏹️";
+  }catch(e){
+   alert("اسمح للتطبيق باستخدام الميكروفون");
   }
+ }else{
+  recorder.stop();
+  record.textContent="🎤";
+ }
+});
 
-  row.appendChild(bubble);
-  messages.appendChild(row);
-  messages.scrollTop=messages.scrollHeight;
+function showText(data){
+ const row=document.createElement("div");
+ const bubble=document.createElement("div");
+ const who=document.createElement("div");
+
+ row.className="msg "+(data.from===socket.id?"mine":"theirs");
+ bubble.className="bubble";
+ who.className="msgname";
+ who.textContent=data.name;
+
+ bubble.appendChild(who);
+ bubble.appendChild(document.createTextNode(data.text));
+ row.appendChild(bubble);
+ messages.appendChild(row);
+ messages.scrollTop=messages.scrollHeight;
 }
 
-socket.on("private message",data=>{
-  showMessage(data,false);
-});
+function showImage(data){
+ const row=document.createElement("div");
+ const bubble=document.createElement("div");
+ const who=document.createElement("div");
+ const img=document.createElement("img");
 
-socket.on("private image",data=>{
-  showMessage(data,true);
-});
+ row.className="msg "+(data.from===socket.id?"mine":"theirs");
+ bubble.className="bubble";
+ who.className="msgname";
+ who.textContent=data.name;
+ img.src=data.image;
+ img.className="msgimg";
+
+ bubble.appendChild(who);
+ bubble.appendChild(img);
+ row.appendChild(bubble);
+ messages.appendChild(row);
+ messages.scrollTop=messages.scrollHeight;
+}
+
+function showAudio(data){
+ const row=document.createElement("div");
+ const bubble=document.createElement("div");
+ const who=document.createElement("div");
+ const audio=document.createElement("audio");
+
+ row.className="msg "+(data.from===socket.id?"mine":"theirs");
+ bubble.className="bubble";
+ who.className="msgname";
+ who.textContent=data.name;
+ audio.controls=true;
+ audio.src=data.audio;
+
+ bubble.appendChild(who);
+ bubble.appendChild(audio);
+ row.appendChild(bubble);
+ messages.appendChild(row);
+ messages.scrollTop=messages.scrollHeight;
+}
+
+socket.on("private message",showText);
+socket.on("private image",showImage);
+socket.on("private audio",showAudio);
 </script>
-
 </body>
 </html>
