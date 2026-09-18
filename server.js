@@ -1,3 +1,8 @@
+
+
+
+
+
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -25,15 +30,27 @@ io.on("connection", (socket) => {
   });
 
   socket.on("private message", (data) => {
-    const senderName = users[socket.id] || "مستخدم";
-
     const message = {
-      name: senderName,
+      from: socket.id,
+      to: data.to,
+      name: users[socket.id] || "مستخدم",
       text: data.text
     };
 
     io.to(data.to).emit("private message", message);
     socket.emit("private message", message);
+  });
+
+  socket.on("private image", (data) => {
+    const message = {
+      from: socket.id,
+      to: data.to,
+      name: users[socket.id] || "مستخدم",
+      image: data.image
+    };
+
+    io.to(data.to).emit("private image", message);
+    socket.emit("private image", message);
   });
 
   socket.on("disconnect", () => {

@@ -1,3 +1,47 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -14,7 +58,7 @@ header{padding:18px;text-align:center;background:#181818;font-size:22px;font-wei
 #users{display:flex;gap:8px;overflow:auto;margin-top:8px}
 .user{padding:9px 14px;border:0;border-radius:10px;background:#333;color:#fff;white-space:nowrap}
 #selected{padding:10px;text-align:center;background:#181818}
-#messages{height:calc(100vh - 285px);overflow:auto;padding:12px}
+#messages{height:calc(100vh - 330px);overflow:auto;padding:12px}
 .msg{display:flex;margin:7px 0}
 .bubble{padding:10px 13px;border-radius:15px;max-width:75%;word-wrap:break-word}
 .mine{justify-content:flex-start}
@@ -22,9 +66,12 @@ header{padding:18px;text-align:center;background:#181818;font-size:22px;font-wei
 .theirs{justify-content:flex-end}
 .theirs .bubble{background:#292929;border-bottom-right-radius:4px}
 .msgname{font-size:11px;opacity:.7;margin-bottom:3px}
+.msgimg{max-width:230px;border-radius:12px;display:block;margin-top:5px}
 form{position:fixed;bottom:0;left:0;right:0;background:#181818;padding:10px;display:flex;gap:8px}
 #input{flex:1;padding:13px;border:0;border-radius:10px;font-size:16px}
 button{padding:10px 18px;border:0;border-radius:10px;background:#00a884;color:#fff;font-weight:bold}
+#photo{display:none}
+.photoBtn{padding:10px 14px;background:#444;border-radius:10px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -44,6 +91,8 @@ button{padding:10px 18px;border:0;border-radius:10px;background:#00a884;color:#f
 <div id="messages"></div>
 
 <form id="form">
+<label for="photo" class="photoBtn">🖼️</label>
+<input id="photo" type="file" accept="image/*">
 <input id="input" placeholder="اكتب رسالة..." autocomplete="off">
 <button type="submit">إرسال</button>
 </form>
@@ -51,12 +100,14 @@ button{padding:10px 18px;border:0;border-radius:10px;background:#00a884;color:#f
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket=io();
+
 const form=document.getElementById("form");
 const input=document.getElementById("input");
 const nameInput=document.getElementById("name");
 const usersBox=document.getElementById("users");
 const messages=document.getElementById("messages");
 const selected=document.getElementById("selected");
+const photo=document.getElementById("photo");
 
 let selectedUser=null;
 
@@ -75,6 +126,7 @@ nameInput.addEventListener("change",join);
 
 socket.on("users",list=>{
   usersBox.innerHTML="";
+
   list.forEach(user=>{
     if(user.id===socket.id)return;
 
@@ -111,23 +163,62 @@ form.addEventListener("submit",e=>{
   input.value="";
 });
 
-socket.on("private message",data=>{
+photo.addEventListener("change",()=>{
+  const file=photo.files[0];
+
+  if(!file)return;
+
+  if(!selectedUser){
+    alert("اختر مستخدمًا أولًا");
+    photo.value="";
+    return;
+  }
+
+  const reader=new FileReader();
+
+  reader.onload=()=>{
+    socket.emit("private image",{
+      to:selectedUser,
+      image:reader.result
+    });
+  };
+
+  reader.readAsDataURL(file);
+  photo.value="";
+});
+
+function showMessage(data,isImage=false){
   const row=document.createElement("div");
   const bubble=document.createElement("div");
   const who=document.createElement("div");
 
-  const myName=nameInput.value.trim()||"مستخدم";
-
-  row.className="msg "+(data.name===myName?"mine":"theirs");
+  row.className="msg "+(data.from===socket.id?"mine":"theirs");
   bubble.className="bubble";
   who.className="msgname";
-
   who.textContent=data.name;
+
   bubble.appendChild(who);
-  bubble.appendChild(document.createTextNode(data.text));
+
+  if(isImage){
+    const img=document.createElement("img");
+    img.src=data.image;
+    img.className="msgimg";
+    bubble.appendChild(img);
+  }else{
+    bubble.appendChild(document.createTextNode(data.text));
+  }
+
   row.appendChild(bubble);
   messages.appendChild(row);
   messages.scrollTop=messages.scrollHeight;
+}
+
+socket.on("private message",data=>{
+  showMessage(data,false);
+});
+
+socket.on("private image",data=>{
+  showMessage(data,true);
 });
 </script>
 
