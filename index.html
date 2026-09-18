@@ -39,6 +39,9 @@ const input = document.getElementById("input");
 const name = document.getElementById("name");
 const messages = document.getElementById("messages");
 
+const savedName = localStorage.getItem("ston_name");
+if (savedName) name.value = savedName;
+
 form.addEventListener("submit", function(e) {
   e.preventDefault();
 
@@ -46,6 +49,8 @@ form.addEventListener("submit", function(e) {
   const username = name.value.trim() || "مستخدم";
 
   if (!msg) return;
+
+  localStorage.setItem("ston_name", username);
 
   socket.emit("chat message", {
     name: username,
