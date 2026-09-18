@@ -1,8 +1,3 @@
-
-
-
-
-
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -21,12 +16,7 @@ io.on("connection", (socket) => {
   socket.on("join", (username) => {
     users[socket.id] = username || "مستخدم";
 
-    const userList = Object.entries(users).map(([id, name]) => ({
-      id,
-      name
-    }));
-
-    io.emit("users", userList);
+    io.emit("users", Object.entries(users).map(([id, name]) => ({id, name})));
   });
 
   socket.on("private message", (data) => {
@@ -53,15 +43,22 @@ io.on("connection", (socket) => {
     socket.emit("private image", message);
   });
 
+  socket.on("private audio", (data) => {
+    const message = {
+      from: socket.id,
+      to: data.to,
+      name: users[socket.id] || "مستخدم",
+      audio: data.audio
+    };
+
+    io.to(data.to).emit("private audio", message);
+    socket.emit("private audio", message);
+  });
+
   socket.on("disconnect", () => {
     delete users[socket.id];
 
-    const userList = Object.entries(users).map(([id, name]) => ({
-      id,
-      name
-    }));
-
-    io.emit("users", userList);
+    io.emit("users", Object.entries(users).map(([id, name]) => ({id, name})));
 
     console.log("جهاز خرج:", socket.id);
   });
