@@ -21,9 +21,10 @@ async function loginUser(stoneId, password) {
   if (!result.rows[0]) return null;
 
   const user = result.rows[0];
-  const valid = await bcrypt.compare(password, user.password_hash);
 
-  if (!valid) return null;
+  if (!(await bcrypt.compare(password, user.password_hash))) {
+    return null;
+  }
 
   return {
     id: user.id,
