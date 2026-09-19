@@ -2,7 +2,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const webpush = require("web-push");
-
+const { initDatabase } = require("./database");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -97,6 +97,16 @@ app.get("/vapid-public-key", (req, res) => {
   res.send(process.env.VAPID_PUBLIC_KEY || "");
 });
 
-server.listen(3000, "0.0.0.0", () => {
-  console.log("Server running on port 3000");
-});
+
+
+
+initDatabase()
+  .then(() => {
+    server.listen(3000, "0.0.0.0", () => {
+      console.log("Server running on port 3000");
+    });
+  })
+  .catch((err) => {
+    console.error("Database initialization failed:", err);
+    process.exit(1);
+  });
