@@ -15,7 +15,7 @@ async function initDatabase() {
       name TEXT NOT NULL,
       password_hash TEXT NOT NULL,
       avatar TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP DEFAULT now()
     );
 
     CREATE TABLE IF NOT EXISTS messages (
@@ -24,8 +24,8 @@ async function initDatabase() {
       receiver_id INTEGER NOT NULL REFERENCES users(id),
       type TEXT NOT NULL DEFAULT  text ,
       content TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      is_read BOOLEAN DEFAULT FALSE
+      created_at TIMESTAMP DEFAULT now(),
+      is_read BOOLEAN DEFAULT false
     );
 
     CREATE INDEX IF NOT EXISTS idx_messages_users
