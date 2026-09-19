@@ -5,7 +5,9 @@ async function createUser(stoneId, name, password) {
   const passwordHash = await bcrypt.hash(password, 12);
 
   const result = await pool.query(
-    ,
+    `INSERT INTO users (stone_id, name, password_hash)
+     VALUES ($1, $2, $3)
+     RETURNING id, stone_id, name, created_at`,
     [stoneId, name, passwordHash]
   );
 
@@ -14,15 +16,18 @@ async function createUser(stoneId, name, password) {
 
 async function loginUser(stoneId, password) {
   const result = await pool.query(
-    ,
+    `SELECT * FROM users WHERE stone_id = $1`,
     [stoneId]
   );
 
-  if (!result.rows[0]) return null;
+  if (!result.rows[0]) {
+    return null;
+  }
 
   const user = result.rows[0];
+  const valid = await bcrypt.compare(password, user.password_hash);
 
-  if (!(await bcrypt.compare(password, user.password_hash))) {
+  if (!valid) {
     return null;
   }
 
@@ -34,4 +39,7 @@ async function loginUser(stoneId, password) {
   };
 }
 
-module.exports = { createUser, loginUser };
+module.exports = {
+  createUser,
+  loginUser
+};
