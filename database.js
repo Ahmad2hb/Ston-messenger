@@ -8,7 +8,29 @@ const pool = new Pool({
 });
 
 async function initDatabase() {
-  await pool.query();
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      stone_id TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      avatar TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS messages (
+      id SERIAL PRIMARY KEY,
+      sender_id INTEGER NOT NULL REFERENCES users(id),
+      receiver_id INTEGER NOT NULL REFERENCES users(id),
+      type TEXT NOT NULL DEFAULT  text ,
+      content TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      is_read BOOLEAN DEFAULT FALSE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_messages_users
+    ON messages(sender_id, receiver_id, created_at);
+  `);
 
   console.log("STONE PostgreSQL database ready");
 }
