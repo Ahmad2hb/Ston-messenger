@@ -96,34 +96,6 @@ io.on("connection", (socket) => {
 app.get("/vapid-public-key", (req, res) => {
   res.send(process.env.VAPID_PUBLIC_KEY || "");
 });
-
-
-
-
-initDatabase()
-  .then(() => {
-    server.listen(3000, "0.0.0.0", () => {
-      console.log("Server running on port 3000");
-    });
-  })
-  .catch((err) => {
-    console.error("Database initialization failed:", err);
-    process.exit(1);
-  });
-
-const { createUser, loginUser } = require("./auth");
-
-app.use(express.json());
-
-app.post("/api/register", async (req, res) => {
-  try {
-    const { stoneId, name, password } = req.body;
-
-    if (!stoneId || !name || !password) {
-      return res.status(400).json({ error: "جميع الحقول مطلوبة" });
-    }
-
-    if (stoneId.length < 4 || password.length < 6) {
       return res.status(400).json({ error: "STONE ID يجب أن يكون 4 أحرف على الأقل وكلمة المرور 6 أحرف على الأقل" });
     }
 
@@ -166,3 +138,25 @@ app.post("/api/login", async (req, res) => {
     res.status(500).json({ error: "حدث خطأ في تسجيل الدخول" });
   }
 });
+
+initDatabase()
+  .then(() => {
+    server.listen(3000, "0.0.0.0", () => {
+      console.log("Server running on port 3000");
+    });
+  })
+  .catch((err) => {
+    console.error("Database initialization failed:", err);
+    process.exit(1);
+  });
+
+initDatabase()
+  .then(() => {
+    server.listen(3000, "0.0.0.0", () => {
+      console.log("Server running on port 3000");
+    });
+  })
+  .catch((err) => {
+    console.error("Database initialization failed:", err);
+    process.exit(1);
+  });
